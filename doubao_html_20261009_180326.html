@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>双人随机AI对战</title>
+<style>
+@font-face {
+    font-family: ys;
+    src: url(https://sdk.mihoyo.com/hk4e/fonts/zh-cn.ttf) format("truetype");
+    font-display: swap;
+}
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+html,body{
+    height:100vh;
+    overflow:hidden;
+    background:#1e1e1e;
+    font-family: ys, monospace;
+    color:#fff;
+}
+.two-player-wrap{
+    width:100vw;
+    height:100vh;
+    display:flex;
+}
+.player-panel{
+    width:50vw;
+    height:100vh;
+    text-align:center;
+    padding-top:40px;
+    overflow:auto;
+}
+.panel-left{
+    border-right:1px solid #444;
+}
+.location {
+    font-size: 20px;
+    font-weight: 500;
+}
+.boss-name {
+    font-size: 50px;
+    white-space: pre-wrap;
+    margin-top:10px;
+}
+.hp-bar {
+    position: relative;
+    width: 60%;
+    height: 14px;
+    margin: 30px auto;
+    background-color: rgba(184, 180, 180, 0.3);
+    overflow: hidden;
+    border-radius:2px;
+}
+.hp-fill {
+    height: 100%;
+    background-color: rgba(241, 7, 7, 0.85);
+}
+.hp-change {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: rgba(255, 220, 220, 0.75);
+}
+.controls {
+    width: 70%;
+    margin: 120px auto 50px;
+    background-color: rgb(30, 30, 30);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: -8px -8px 16px rgba(255, 255, 255, 0.06),
+                8px 8px 16px rgba(0, 0, 0, 0.6);
+}
+.controls h2 {
+    margin: 0 0 16px;
+    color: #ffd94a;
+    font-size: 20px;
+    text-shadow: 0 0 12px rgba(255, 217, 74, 0.55);
+    padding-bottom:10px;
+}
+.controls p {
+    margin: 12px 0 20px;
+    color: #c8c8c8;
+    font-size: 15px;
+}
+.charge-value {
+    color: #ffd94a;
+    font-size: 22px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(255, 217, 74, 0.7);
+}
+.controls button {
+    margin: 6px;
+    padding: 12px 26px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    outline: none;
+    border: none;
+    border-radius: 6px;
+    transition: transform 0.2s ease, filter 0.2s ease, opacity 0.2s;
+}
+.increase-charge {
+    background: linear-gradient(180deg, #2b6bff, #1a4fd0);
+    filter: drop-shadow(0 0 8px rgba(43, 107, 255, 0.6));
+}
+.increase-charge:hover {
+    filter: drop-shadow(0 0 14px rgba(43, 107, 255, 0.9));
+}
+.attack-boss {
+    background: linear-gradient(180deg, #ff5a5a, #d42626);
+    filter: drop-shadow(0 0 8px rgba(255, 90, 90, 0.6));
+}
+.attack-boss:hover {
+    filter: drop-shadow(0 0 14px rgba(255, 90, 90, 0.9));
+}
+.auto-btn{
+    background:linear-gradient(180deg,#00b847,#008834);
+    filter: drop-shadow(0 0 8px rgba(0,184,71,0.6));
+}
+.auto-btn.stop{
+    background:linear-gradient(180deg,#b82828,#881818);
+    filter: drop-shadow(0 0 8px rgba(184,40,40,0.6));
+}
+.controls button:active {
+    transform: translateY(3px);
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
+}
+.controls button:disabled {
+    opacity:0.4;
+    cursor:not-allowed;
+    filter:none;
+}
+.finish-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.85);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+}
+.finish-overlay.show{
+    display:flex;
+    animation:fadeIn 0.4s ease;
+}
+.finish-box{
+    text-align:center;
+    padding:40px 60px;
+    border-radius:16px;
+    background:linear-gradient(180deg,rgba(60,0,0,0.9),rgba(0,0,0,0.9));
+    border:2px solid #ffd94a;
+    box-shadow:0 0 40px rgba(255,217,74,0.6);
+    transform:scale(0.5);
+    animation:popIn 0.6s cubic-bezier(0.2,1.4,0.4,1) forwards;
+}
+.finish-title{
+    font-size:28px;
+    color:#ffd94a;
+    margin-bottom:20px;
+    letter-spacing:4px;
+}
+.finish-text{
+    font-size:72px;
+    font-weight:bold;
+    color:#fff;
+    text-shadow:0 0 18px rgba(255,80,80,0.9);
+    margin-bottom:20px;
+}
+.finish-sub{
+    font-size:20px;
+    color:#ccc;
+    margin-bottom:30px;
+}
+.restart-btn{
+    padding:14px 34px;
+    font-size:18px;
+    font-weight:bold;
+    color:#fff;
+    background:linear-gradient(180deg,#ffd94a,#d4a017);
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    box-shadow:0 0 20px rgba(255,217,74,0.7);
+}
+.restart-btn:hover{
+    filter:brightness(1.15);
+}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes popIn{from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+</style>
+</head>
+<body>
+<div class="two-player-wrap">
+    <div class="player-panel panel-left" id="p1">
+        <h2 class="location"></h2>
+        <h1 class="boss-name"></h1>
+        <div class="hp-bar">
+            <div class="hp-fill"></div>
+            <div class="hp-change"></div>
+        </div>
+        <div class="controls">
+            <h2>玩家1控制台</h2>
+            <p>当前蓄力值: <span class="charge-value"></span></p>
+            <button class="increase-charge">增加蓄力值</button>
+            <button class="attack-boss">攻击</button>
+        </div>
+    </div>
+    <div class="player-panel" id="p2">
+        <h2 class="location"></h2>
+        <h1 class="boss-name"></h1>
+        <div class="hp-bar">
+            <div class="hp-fill"></div>
+            <div class="hp-change"></div>
+        </div>
+        <div class="controls">
+            <h2>玩家2控制台</h2>
+            <p>当前蓄力值: <span class="charge-value"></span></p>
+            <button class="increase-charge">增加蓄力值</button>
+            <button class="attack-boss">攻击</button>
+        </div>
+    </div>
+</div>
+
+<div style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:100;">
+    <button id="autoToggleBtn" class="auto-btn">开启AI自动对战</button>
+</div>
+
+<div class="finish-overlay" id="finishOverlay">
+    <div class="finish-box">
+        <div class="finish-title">战斗结束</div>
+        <div class="finish-text" id="finishText">杨 输了</div>
+        <div class="finish-sub">血量归零，战斗终结</div>
+        <button class="restart-btn" id="restartBtn">重新开始</button>
+    </div>
+</div>
+
+<script>
+$ = document.querySelector.bind(document);
+
+function createBattleSystem(rootSelector, bossConfig) {
+    const root = $(rootSelector);
+    const locationElement = root.querySelector('.location');
+    const bossNameElement = root.querySelector('.boss-name');
+    const hpFill = root.querySelector('.hp-fill');
+    const hpChange = root.querySelector('.hp-change');
+    const chargeValueDisplay = root.querySelector('.charge-value');
+    const increaseChargeButton = root.querySelector('.increase-charge');
+    const attackBossButton = root.querySelector('.attack-boss');
+
+    const boss = {
+        location: bossConfig.location,
+        name: bossConfig.name,
+        maxHP: bossConfig.maxHP,
+        currentHP: bossConfig.maxHP,
+        previousHP: bossConfig.maxHP,
+    };
+    const link = {
+        chargeValue: 1,
+        attackBuff: 1.5,
+    };
+
+    function updateBossInfo() {
+        locationElement.textContent = `「 盘踞于${boss.location}的 」`;
+        bossNameElement.textContent = boss.name;
+    }
+
+    function updateHPBar() {
+        const hpPercentage = (boss.currentHP / boss.maxHP) * 100;
+        const hpChangeValue = boss.previousHP - boss.currentHP;
+        if (hpChangeValue > 0) {
+            hpFill.style.transition = 'none';
+            hpChange.style.transition = 'none';
+            hpChange.style.left = `${hpPercentage}%`;
+            hpChange.style.width = `${(hpChangeValue / boss.maxHP) * 100}%`;
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    hpFill.style.transition = 'width 0.5s ease-out';
+                    hpChange.style.transition = 'width 0.5s ease-out';
+                    hpFill.style.width = `${hpPercentage}%`;
+                    hpChange.style.width = '0%';
+                });
+            });
+            setTimeout(() => {
+                hpFill.style.transition = 'none';
+                hpChange.style.transition = 'none';
+            }, 550);
+        }
+    }
+
+    function chargeAttack() {
+        ++link.chargeValue;
+        updateChargeValue();
+    }
+    function setCharge(val){
+        link.chargeValue = val;
+        updateChargeValue();
+    }
+    function updateChargeValue() {
+        chargeValueDisplay.textContent = link.chargeValue;
+    }
+    function attackBoss() {
+        if (link.chargeValue > 0) {
+            const damage = Math.ceil(link.chargeValue * link.attackBuff);
+            boss.previousHP = boss.currentHP;
+            boss.currentHP = Math.max(boss.currentHP - damage, 0);
+            link.chargeValue = 1;
+            updateChargeValue();
+            updateHPBar();
+            checkGameOver();
+        }
+    }
+
+    increaseChargeButton.addEventListener('click', chargeAttack);
+    attackBossButton.addEventListener('click', attackBoss);
+
+    return {
+        boss, link, root,
+        updateChargeValue,
+        updateBossInfo,
+        updateHPBar,
+        chargeAttack,
+        setCharge,
+        attackBoss
+    }
+}
+
+const player1 = createBattleSystem("#p1", {
+    location: "学校",
+    name: "杨",
+    maxHP: 1000
+});
+const player2 = createBattleSystem("#p2", {
+    location: "学校",
+    name: "智",
+    maxHP: 1000
+});
+
+let gameOver = false;
+const finishOverlay = $('#finishOverlay');
+const finishText = $('#finishText');
+const restartBtn = $('#restartBtn');
+
+let autoMode = false;
+let aiTimer1 = null;
+let aiTimer2 = null;
+let attackDelayTimer1 = null;
+let attackDelayTimer2 = null;
+const autoToggleBtn = $('#autoToggleBtn');
+
+// AI蓄力之后停留显示的时间（毫秒，400人眼刚好看清）
+const SHOW_CHARGE_DELAY = 400;
+
+// 随机毫秒：300~1600 之间随机间隔
+function randomDelay(){
+    return Math.floor(Math.random() * 1300) + 300;
+}
+// AI随机蓄力：1‑50层
+function randomChargeCount(){
+    return Math.floor(Math.random()*50)+1;
+}
+
+// 独立AI循环
+function runAI(unit){
+    if(!autoMode || gameOver) return;
+    const cnt = randomChargeCount();
+    unit.setCharge(cnt);
+
+    // 蓄力数字显示一小会儿之后再攻击
+    const atkTimer = setTimeout(()=>{
+        if(!autoMode || gameOver) return;
+        unit.attackBoss();
+    }, SHOW_CHARGE_DELAY);
+
+    if(unit===player1){
+        attackDelayTimer1 = atkTimer;
+    }else{
+        attackDelayTimer2 = atkTimer;
+    }
+
+    const delay = randomDelay();
+    if(unit===player1){
+        aiTimer1 = setTimeout(()=>runAI(player1), delay);
+    }else{
+        aiTimer2 = setTimeout(()=>runAI(player2), delay);
+    }
+}
+
+function startAutoMode(){
+    autoMode = true;
+    autoToggleBtn.textContent = "停止AI自动对战";
+    autoToggleBtn.classList.add("stop");
+    runAI(player1);
+    runAI(player2);
+}
+
+function stopAutoMode(){
+    autoMode = false;
+    autoToggleBtn.textContent = "开启AI自动对战";
+    autoToggleBtn.classList.remove("stop");
+    clearTimeout(aiTimer1);
+    clearTimeout(aiTimer2);
+    clearTimeout(attackDelayTimer1);
+    clearTimeout(attackDelayTimer2);
+    aiTimer1=null;
+    aiTimer2=null;
+    attackDelayTimer1=null;
+    attackDelayTimer2=null;
+}
+
+function checkGameOver() {
+    if(gameOver) return;
+    if(player1.boss.currentHP <= 0){
+        gameOver = true;
+        finishText.textContent = `${player1.boss.name} 输了`;
+        finishOverlay.classList.add('show');
+        disableAllButtons();
+        stopAutoMode();
+    }else if(player2.boss.currentHP <= 0){
+        gameOver = true;
+        finishText.textContent = `${player2.boss.name} 输了`;
+        finishOverlay.classList.add('show');
+        disableAllButtons();
+        stopAutoMode();
+    }
+}
+function disableAllButtons(){
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+}
+function enableAllButtons(){
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=false);
+}
+
+autoToggleBtn.addEventListener('click',()=>{
+    if(autoMode){
+        stopAutoMode();
+    }else{
+        startAutoMode();
+    }
+})
+
+restartBtn.addEventListener('click',()=>{
+    stopAutoMode();
+    player1.boss.currentHP = player1.boss.maxHP;
+    player1.boss.previousHP = player1.boss.maxHP;
+    player1.link.chargeValue = 1;
+    player1.root.querySelector('.hp-fill').style.width="100%";
+    player1.root.querySelector('.hp-change').style.width="0%";
+    player1.updateChargeValue();
+
+    player2.boss.currentHP = player2.boss.maxHP;
+    player2.boss.previousHP = player2.boss.maxHP;
+    player2.link.chargeValue = 1;
+    player2.root.querySelector('.hp-fill').style.width="100%";
+    player2.root.querySelector('.hp-change').style.width="0%";
+    player2.updateChargeValue();
+
+    gameOver = false;
+    finishOverlay.classList.remove('show');
+    enableAllButtons();
+})
+
+window.onload = ()=>{
+    player1.updateBossInfo();
+    player1.updateChargeValue();
+    player2.updateBossInfo();
+    player2.updateChargeValue();
+}
+</script>
+</body>
+</html>
+<!-- （注：内容由AI生成） -->
